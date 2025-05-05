@@ -119,7 +119,7 @@ export const ProductsPage: React.FC = () => {
   };
 
   const handleViewProduct = (slug: string) => {
-    navigate(`/products/${slug}`);
+    navigate(`/products/slug/${slug}`);
   };
 
   const openDeleteDialog = (productId: string, productName: string) => {
@@ -136,18 +136,22 @@ export const ProductsPage: React.FC = () => {
     if (!productToDelete) return;
     
     try {
+      // Cerrar el diálogo primero
+      setIsDeleteDialogOpen(false);
+      setProductToDelete(null);
+      
+      // Eliminar el producto
       await ProductService.deleteProduct(productToDelete.id);
       showToast('Producto eliminado con éxito', 'success');
-      fetchProducts(currentPage);
+      
+      // Actualizar la lista de productos
+      await fetchProducts(currentPage);
     } catch (err: any) {
       // Solo mostramos el mensaje de error si el usuario sigue autenticado
       if (isAuthenticated) {
         const errorMessage = err.displayMessage || 'Error al eliminar el producto. Por favor, inténtelo de nuevo.';
         showToast(errorMessage, 'error');
       }
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setProductToDelete(null);
     }
   };
   
@@ -377,26 +381,44 @@ export const ProductsPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* AlertDialog de confirmación de eliminación */}
-        <AlertDialog open={isDeleteDialogOpen} onOpenChange={cancelDelete}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>¿Está seguro de que desea eliminar este producto?</AlertDialogTitle>
-            </AlertDialogHeader>
-            {/* <AlertDialogDescription>
+        {/* Modal de confirmación de eliminación */}
+        {isDeleteDialogOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div 
+              className="fixed inset-0 bg-black/50" 
+              onClick={cancelDelete}
+            />
+            <div className="relative bg-white rounded-lg shadow-lg p-6 max-w-[500px] w-full mx-4">
+              <h2 className="text-lg font-semibold mb-4">
+                ¿Está seguro de que desea eliminar este producto?
+              </h2>
               {productToDelete && (
-                <>
-                  <p>Nombre: {productToDelete.name}</p>
-                  <p>Esta acción no se puede deshacer.</p>
-                </>
+                <div className="mb-4">
+                  <p className="text-gray-600">
+                    Se eliminará el producto: <strong>{productToDelete.name}</strong>
+                  </p>
+                  <p className="text-sm text-red-500 mt-2">
+                    Esta acción no se puede deshacer.
+                  </p>
+                </div>
               )}
-            </AlertDialogDescription> */}
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={cancelDelete}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmDelete}
+                >
+                  Eliminar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );
