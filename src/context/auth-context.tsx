@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import AuthService, { User, AuthResponse } from '../services/auth.service';
 
 interface AuthContextType {
@@ -12,14 +12,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Intervalo en milisegundos para verificar la autenticación
-const AUTH_CHECK_INTERVAL = 5000;
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  // Estado para forzar una actualización
-  const [, setAuthCheckCount] = useState(0);
 
   // Efecto para la inicialización de la autenticación
   useEffect(() => {
@@ -32,7 +27,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const storedUser = AuthService.getCurrentUser();
           if (storedUser) {
             setUser(storedUser);
-            console.log('Usuario restaurado desde localStorage:', storedUser);
           }
         }
       } catch (error) {
@@ -48,38 +42,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initializeAuth();
   }, []);
 
-  // Efecto para verificar periódicamente la autenticación
-  useEffect(() => {
-    // Solo empezar a verificar después de la inicialización
-    if (!isInitialized) return;
-
-    const checkInterval = setInterval(() => {
-      // Verificar si el token y el usuario todavía existen en localStorage
-      const isStillAuthenticated = AuthService.isAuthenticated();
-      
-      // Si el usuario estaba autenticado pero ya no lo está, cerrar sesión
-      if (!isStillAuthenticated && user) {
-        console.log('Sesión expirada o eliminada, cerrando sesión');
-        logout();
-      }
-      
-      // Forzar una re-renderización para actualizar isAuthenticated
-      setAuthCheckCount(count => count + 1);
-    }, AUTH_CHECK_INTERVAL);
-
-    // Limpiar el intervalo cuando el componente se desmonte
-    return () => clearInterval(checkInterval);
-  }, [isInitialized, user]);
-
-  const login = (data: AuthResponse) => {
+  const login = useCallback((data: AuthResponse) => {
     AuthService.saveUserData(data);
     setUser(data.user);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     AuthService.logout();
     setUser(null);
-  };
+  }, []);
 
   // Verificar si está autenticado directamente desde el servicio
   const isAuthenticated = AuthService.isAuthenticated();

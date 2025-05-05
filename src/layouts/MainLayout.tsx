@@ -12,6 +12,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  console.log('MainLayout:', {
+    user,
+    isAuthenticated,
+    isAdmin,
+    userRole: user?.role
+  });
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -48,6 +55,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 <>
                   <Link to="/dashboard" className="text-gray-700 hover:text-[#3c2052]">
                     Dashboard
+                  </Link>
+                  <Link to="/orders" className="text-gray-700 hover:text-[#3c2052]">
+                    Órdenes
                   </Link>
                   {isAdmin && (
                     <Link to="/products" className="text-gray-700 hover:text-[#3c2052]">
@@ -96,6 +106,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       Dashboard
+                    </Link>
+                    <Link 
+                      to="/orders" 
+                      className="text-gray-700 hover:text-[#3c2052] py-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Órdenes
                     </Link>
                     {isAdmin && (
                       <Link 
