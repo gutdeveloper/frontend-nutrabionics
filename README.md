@@ -29,7 +29,7 @@ Un panel de administración completo desarrollado con React para la gestión de 
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/react-nutrabionics.git
+   git clone https://github.com/gutdeveloper/frontend-nutrabionics.git
    cd react-nutrabionics
    ```
 
