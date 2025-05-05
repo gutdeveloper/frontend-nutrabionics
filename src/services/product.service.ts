@@ -16,9 +16,8 @@ export interface ProductsResponse {
   data: Product[];
   meta: {
     total: number;
-    page: number;
-    limit: number;
     totalPages: number;
+    currentPage: number;
   };
 }
 
