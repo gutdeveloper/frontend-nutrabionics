@@ -1,54 +1,82 @@
-# React + TypeScript + Vite
+# Nutrabionics - Gestión de Productos
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Un panel de administración completo desarrollado con React para la gestión de productos con autenticación, roles de usuario y funcionalidades de CRUD.
 
-Currently, two official plugins are available:
+## 📋 Características
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Autenticación y Autorización**
+  - Sistema de login/registro con validación
+  - Roles de usuario (admin/usuario estándar)
+  - Rutas protegidas en función del rol
+  - Persistencia de sesión
 
-## Expanding the ESLint configuration
+- **Gestión de Productos**
+  - Listado paginado de productos
+  - Visualización detallada con información completa
+  - Creación de nuevos productos
+  - Edición de productos existentes
+  - Eliminación de productos
+  - Referencias y slugs de producto
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🚀 Instalación y Uso
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### Prerequisitos
+
+- Node.js >= 18.x
+- npm >= 9.x
+
+### Instalación
+
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/tu-usuario/react-nutrabionics.git
+   cd react-nutrabionics
+   ```
+
+2. Instala las dependencias:
+   ```bash
+   npm install
+   ```
+
+3. Configura las variables de entorno:
+   ```bash
+   cp env.example .env
+   ```
+   
+   Edita el archivo `.env` con tus propias configuraciones.
+
+4. Inicia el servidor de desarrollo:
+   ```bash
+   npm run dev
+   ```
+
+5. Abre tu navegador en `http://localhost:5174`
+
+## 🏗️ Estructura del Proyecto
+
+```
+react-nutrabionics/
+├── src/                    # Código fuente
+│   ├── assets/             # Recursos estáticos (imágenes, etc.)
+│   ├── components/         # Componentes React
+│   │   ├── atoms/          # Componentes básicos (Button, Input, etc.)
+│   │   └── molecules/      # Componentes compuestos
+│   ├── context/            # Contextos de React (Auth, Toast)
+│   ├── layouts/            # Componentes de layout
+│   ├── lib/                # Funciones utilitarias
+│   ├── pages/              # Componentes de página
+│   ├── schemas/            # Esquemas de validación Zod
+│   ├── services/           # Servicios de API
+│   ├── App.tsx             # Componente principal
+│   └── main.tsx            # Punto de entrada
+├── public/                 # Archivos públicos
+└── ...
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🔐 Autenticación y Seguridad
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+El sistema cuenta con autenticación basada en roles:
+- **Usuarios estándar**: Acceso al dashboard personal
+- **Administradores**: Acceso completo a la gestión de productos
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+Las rutas protegidas verifican los permisos del usuario antes de renderizar el contenido.
