@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.API_URL || 'http://localhost:3000/api/v1';
+// Cambiar process.env a import.meta.env para compatibilidad con Vite
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 // Crear instancia de axios con configuración base
 const api = axios.create({

@@ -18,6 +18,24 @@ import ProductService, { Product, ProductCreateData } from '../services/product.
 import { useToast } from '../context/toast-context';
 import { useAuth } from '../context/auth-context';
 import { productSchema, ProductFormValues } from '../schemas/product.schema';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose
+} from '../components/atoms/Dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+  AlertDialogCancel
+} from '../components/atoms/AlertDialog';
 
 // Componente auxiliar para el mensaje de error que falta
 const FormError: React.FC<{ message?: string }> = ({ message }) => {
@@ -35,6 +53,8 @@ export const ProductsPage: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<{id: string, name: string} | null>(null);
 
   const {
     register,
@@ -102,19 +122,32 @@ export const ProductsPage: React.FC = () => {
     navigate(`/products/${slug}`);
   };
 
-  const handleDeleteProduct = async (productId: string) => {
-    if (window.confirm('¿Está seguro de que desea eliminar este producto?')) {
-      try {
-        await ProductService.deleteProduct(productId);
-        showToast('Producto eliminado con éxito', 'success');
-        fetchProducts(currentPage);
-      } catch (err: any) {
-        // Solo mostramos el mensaje de error si el usuario sigue autenticado
-        if (isAuthenticated) {
-          const errorMessage = err.displayMessage || 'Error al eliminar el producto. Por favor, inténtelo de nuevo.';
-          showToast(errorMessage, 'error');
-        }
+  const openDeleteDialog = (productId: string, productName: string) => {
+    setProductToDelete({ id: productId, name: productName });
+    setIsDeleteDialogOpen(true);
+  };
+
+  const cancelDelete = () => {
+    setProductToDelete(null);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
+    
+    try {
+      await ProductService.deleteProduct(productToDelete.id);
+      showToast('Producto eliminado con éxito', 'success');
+      fetchProducts(currentPage);
+    } catch (err: any) {
+      // Solo mostramos el mensaje de error si el usuario sigue autenticado
+      if (isAuthenticated) {
+        const errorMessage = err.displayMessage || 'Error al eliminar el producto. Por favor, inténtelo de nuevo.';
+        showToast(errorMessage, 'error');
       }
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setProductToDelete(null);
     }
   };
   
@@ -220,7 +253,7 @@ export const ProductsPage: React.FC = () => {
                             <Button
                               size="sm"
                               variant="destructive"
-                              onClick={() => handleDeleteProduct(product.id)}
+                              onClick={() => openDeleteDialog(product.id, product.name)}
                             >
                               Eliminar
                             </Button>
@@ -245,109 +278,125 @@ export const ProductsPage: React.FC = () => {
           </>
         )}
         
-        {/* Modal de creación de producto */}
-        {isCreating && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b">
-                <h2 className="text-xl font-semibold">Crear Nuevo Producto</h2>
-                <button
-                  onClick={toggleCreateModal}
-                  className="text-gray-500 hover:text-gray-700"
+        {/* Modal de creación de producto usando Dialog component */}
+        <Dialog 
+          open={isCreating} 
+          onOpenChange={toggleCreateModal}
+          className="w-full max-w-3xl"
+        >
+          <DialogHeader>
+            <DialogTitle>Crear Nuevo Producto</DialogTitle>
+            <DialogClose onClick={toggleCreateModal} />
+          </DialogHeader>
+          
+          <DialogContent className="p-4 sm:p-6">
+            <form onSubmit={handleSubmit(handleCreateProduct)} className="space-y-4">
+              <FormField
+                id="name"
+                label="Nombre"
+                register={register('name')}
+                error={errors.name}
+                required
+              />
+
+              <div className="space-y-1">
+                <label
+                  htmlFor="description"
+                  className="block text-sm font-medium text-gray-700"
                 >
-                  ✕
-                </button>
+                  Descripción <span className="text-red-500 ml-1">*</span>
+                </label>
+                <textarea
+                  id="description"
+                  rows={4}
+                  className="w-full rounded-md border border-input p-2 text-sm"
+                  {...register('description')}
+                />
+                {errors.description && (
+                  <FormError message={errors.description.message} />
+                )}
               </div>
-              
-              <div className="p-4 sm:p-6">
-                <form onSubmit={handleSubmit(handleCreateProduct)} className="space-y-4">
-                  <FormField
-                    id="name"
-                    label="Nombre"
-                    register={register('name')}
-                    error={errors.name}
-                    required
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label
+                    htmlFor="price"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Precio <span className="text-red-500 ml-1">*</span>
+                  </label>
+                  <input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    className="w-full rounded-md border border-input p-2 text-sm"
+                    {...register('price', { valueAsNumber: true })}
                   />
-
-                  <div className="space-y-1">
-                    <label
-                      htmlFor="description"
-                      className="block text-sm font-medium text-gray-700"
-                    >
-                      Descripción <span className="text-red-500 ml-1">*</span>
-                    </label>
-                    <textarea
-                      id="description"
-                      rows={4}
-                      className="w-full rounded-md border border-input p-2 text-sm"
-                      {...register('description')}
-                    />
-                    {errors.description && (
-                      <FormError message={errors.description.message} />
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label
-                        htmlFor="price"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Precio <span className="text-red-500 ml-1">*</span>
-                      </label>
-                      <input
-                        id="price"
-                        type="number"
-                        step="0.01"
-                        className="w-full rounded-md border border-input p-2 text-sm"
-                        {...register('price', { valueAsNumber: true })}
-                      />
-                      {errors.price && (
-                        <FormError message={errors.price.message} />
-                      )}
-                    </div>
-                    
-                    <FormField
-                      id="quantity"
-                      label="Cantidad"
-                      type="number"
-                      register={register('quantity', { valueAsNumber: true })}
-                      error={errors.quantity}
-                      required
-                    />
-                  </div>
-
-                  <FormField
-                    id="reference"
-                    label="Referencia"
-                    register={register('reference')}
-                    error={errors.reference}
-                    required
-                  />
-
-                  <div className="flex flex-wrap justify-end gap-2 pt-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={toggleCreateModal}
-                      disabled={isSubmitting}
-                      className="flex-grow sm:flex-grow-0"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={isSubmitting}
-                      className="flex-grow sm:flex-grow-0"
-                    >
-                      {isSubmitting ? 'Creando...' : 'Crear Producto'}
-                    </Button>
-                  </div>
-                </form>
+                  {errors.price && (
+                    <FormError message={errors.price.message} />
+                  )}
+                </div>
+                
+                <FormField
+                  id="quantity"
+                  label="Cantidad"
+                  type="number"
+                  register={register('quantity', { valueAsNumber: true })}
+                  error={errors.quantity}
+                  required
+                />
               </div>
-            </div>
-          </div>
-        )}
+
+              <FormField
+                id="reference"
+                label="Referencia"
+                register={register('reference')}
+                error={errors.reference}
+                required
+              />
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={toggleCreateModal}
+                  disabled={isSubmitting}
+                  className="flex-grow sm:flex-grow-0"
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="flex-grow sm:flex-grow-0"
+                >
+                  {isSubmitting ? 'Creando...' : 'Crear Producto'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* AlertDialog de confirmación de eliminación */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={cancelDelete}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Está seguro de que desea eliminar este producto?</AlertDialogTitle>
+            </AlertDialogHeader>
+            {/* <AlertDialogDescription>
+              {productToDelete && (
+                <>
+                  <p>Nombre: {productToDelete.name}</p>
+                  <p>Esta acción no se puede deshacer.</p>
+                </>
+              )}
+            </AlertDialogDescription> */}
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete}>Eliminar</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </MainLayout>
   );
