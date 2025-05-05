@@ -8,6 +8,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
+import { OrdersPage } from './pages/OrdersPage';
 import './App.css';
 
 function App() {
@@ -41,10 +42,20 @@ function App() {
               }
             />
             <Route
-              path="/products/:slug"
+              path="/products/slug/:slug"
               element={
                 <ProtectedRoute requireAdmin>
                   <ProductDetailPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Ruta de órdenes accesible para todos los usuarios autenticados */}
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <OrdersPage />
                 </ProtectedRoute>
               }
             />

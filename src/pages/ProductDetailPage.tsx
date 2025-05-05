@@ -17,7 +17,7 @@ const FormError: React.FC<{ message?: string }> = ({ message }) => {
 };
 
 export const ProductDetailPage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: urlSlug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { isAuthenticated, isAdmin, isInitialized } = useAuth();
@@ -25,6 +25,12 @@ export const ProductDetailPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [currentSlug, setCurrentSlug] = useState<string | undefined>(urlSlug);
+
+  // Actualizar el slug actual cuando cambia el slug de la URL
+  useEffect(() => {
+    setCurrentSlug(urlSlug);
+  }, [urlSlug]);
 
   // Verificar permisos solo después de que la autenticación se haya inicializado
   useEffect(() => {
@@ -55,11 +61,16 @@ export const ProductDetailPage: React.FC = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
-      if (!slug || !isInitialized || !isAuthenticated || !isAdmin) return;
+      if (!currentSlug || !isInitialized || !isAuthenticated || !isAdmin) {
+        console.log('Missing required data:', { currentSlug, isInitialized, isAuthenticated, isAdmin });
+        return;
+      }
       
       try {
+        console.log('Fetching product with slug:', currentSlug);
         setIsLoading(true);
-        const data = await ProductService.getProductBySlug(slug);
+        const data = await ProductService.getProductBySlug(currentSlug);
+        console.log('Product data received:', data);
         setProduct(data);
         
         // Prepara los datos para el formulario
@@ -71,6 +82,7 @@ export const ProductDetailPage: React.FC = () => {
           reference: data.reference,
         });
       } catch (err: any) {
+        console.error('Error fetching product:', err);
         // Solo mostrar mensaje de error si el usuario sigue autenticado
         if (isAuthenticated) {
           const errorMessage = err.displayMessage || 'Error al cargar el producto. Por favor, inténtelo de nuevo.';
@@ -82,10 +94,10 @@ export const ProductDetailPage: React.FC = () => {
     };
 
     fetchProduct();
-  }, [slug, reset, showToast, isInitialized, isAuthenticated, isAdmin]);
+  }, [currentSlug, reset, showToast, isInitialized, isAuthenticated, isAdmin]);
 
   const handleUpdate = async (data: ProductUpdateFormValues) => {
-    if (!slug || !product || !isAuthenticated || !isAdmin) return;
+    if (!product || !isAuthenticated || !isAdmin) return;
     
     try {
       setIsSaving(true);
@@ -103,6 +115,12 @@ export const ProductDetailPage: React.FC = () => {
         const updatedProduct = await ProductService.updateProduct(product.id, updateData);
         setProduct(updatedProduct);
         showToast('Producto actualizado con éxito', 'success');
+        
+        // Si el nombre cambió, actualizar el slug y redirigir
+        if (data.name !== product.name) {
+          setCurrentSlug(updatedProduct.slug);
+          navigate(`/products/slug/${updatedProduct.slug}`, { replace: true });
+        }
       } else {
         showToast('No se realizaron cambios', 'default');
       }
@@ -120,7 +138,7 @@ export const ProductDetailPage: React.FC = () => {
   };
 
   const handleDelete = async () => {
-    if (!slug || !product || !isAuthenticated || !isAdmin) return;
+    if (!product || !isAuthenticated || !isAdmin) return;
     
     if (window.confirm('¿Está seguro de que desea eliminar este producto?')) {
       try {
@@ -168,44 +186,34 @@ export const ProductDetailPage: React.FC = () => {
     );
   }
 
-  if (!product && !isLoading) {
+  if (!product) {
     return (
       <MainLayout>
-        <div className="max-w-3xl mx-auto">
-          <div className="text-red-500 p-4 bg-red-50 rounded-md mb-4">
-            No se encontró el producto solicitado
-          </div>
-          <div className="mt-4">
-            <Button onClick={() => navigate('/products')}>
-              Volver a productos
-            </Button>
-          </div>
-        </div>
+        <div className="text-center py-8">Producto no encontrado</div>
       </MainLayout>
     );
   }
 
   return (
     <MainLayout>
-      <div className="max-w-3xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <h1 className="text-2xl font-bold">
-            {isEditing ? 'Editar Producto' : 'Detalle del Producto'}
-          </h1>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => navigate('/products')}>
-              Volver
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Detalles del Producto</h1>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={toggleEdit}
+              disabled={isSaving}
+            >
+              {isEditing ? 'Cancelar' : 'Editar'}
             </Button>
-            {!isEditing && (
-              <>
-                <Button variant="default" onClick={toggleEdit}>
-                  Editar
-                </Button>
-                <Button variant="destructive" onClick={handleDelete}>
-                  Eliminar
-                </Button>
-              </>
-            )}
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isSaving}
+            >
+              Eliminar
+            </Button>
           </div>
         </div>
 
@@ -265,7 +273,7 @@ export const ProductDetailPage: React.FC = () => {
               required
             />
 
-            <div className="flex flex-wrap justify-end gap-2 pt-4">
+            <div className="flex justify-end gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -289,67 +297,49 @@ export const ProductDetailPage: React.FC = () => {
             <div className="bg-primary/10 p-4 border-b">
               <h2 className="text-xl font-medium text-primary break-words">{product?.name}</h2>
               <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
-                {/* <span className="px-2 py-1 bg-primary/20 rounded-full text-primary">ID: {product?.id.substring(0, 8)}</span> */}
+                <span className="px-2 py-1 bg-primary/20 rounded-full text-primary">ID: {product?.id.substring(0, 8)}</span>
               </div>
             </div>
             
-            <div className="p-4 sm:p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Información del producto</h3>
-                    <div className="bg-gray-50 p-4 rounded-md">
-                      <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
-                        <span className="font-medium text-gray-600">Referencia</span>
-                        <span className="font-medium text-primary break-all">{product?.reference}</span>
-                      </div>
-                      <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
-                        <span className="font-medium text-gray-600">Slug</span>
-                        <span className="font-medium break-all">{product?.slug}</span>
-                      </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Información del producto</h3>
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
+                      <span className="font-medium text-gray-600">Precio</span>
+                      <span className="font-medium">${product?.price.toFixed(2)}</span>
                     </div>
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Detalles del producto</h3>
-                    <div className="bg-gray-50 p-4 rounded-md">
-                      <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
-                        <span className="font-medium text-gray-600">Precio</span>
-                        <span className="text-lg font-bold text-primary">${product?.price.toFixed(2)}</span>
-                      </div>
-                      <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
-                        <span className="font-medium text-gray-600">Cantidad</span>
-                        <span className="font-medium">{product?.quantity} unidades</span>
-                      </div>
-                      <div className="flex flex-wrap justify-between items-center py-2">
-                        <span className="font-medium text-gray-600">Estado</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${(product?.quantity || 0) > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {(product?.quantity || 0) > 0 ? 'En stock' : 'Agotado'}
-                        </span>
-                      </div>
+                    <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
+                      <span className="font-medium text-gray-600">Cantidad</span>
+                      <span>{product?.quantity}</span>
                     </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Datos de registro</h3>
-                    <div className="bg-gray-50 p-4 rounded-md">
-                      <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
-                        <span className="font-medium text-gray-600">Creado</span>
-                        <span>{new Date(product?.createdAt || '').toLocaleDateString()}</span>
-                      </div>
-                      <div className="flex flex-wrap justify-between items-center py-2">
-                        <span className="font-medium text-gray-600">Actualizado</span>
-                        <span>{new Date(product?.updatedAt || '').toLocaleDateString()}</span>
-                      </div>
+                    <div className="flex flex-wrap justify-between items-center py-2">
+                      <span className="font-medium text-gray-600">Referencia</span>
+                      <span>{product?.reference}</span>
                     </div>
                   </div>
                 </div>
                 
                 <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Descripción</h3>
-                  <div className="bg-gray-50 p-4 rounded-md h-full">
-                    <p className="whitespace-pre-line text-gray-700">{product?.description}</p>
+                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Datos de registro</h3>
+                  <div className="bg-gray-50 p-4 rounded-md">
+                    <div className="flex flex-wrap justify-between items-center py-2 border-b border-gray-200">
+                      <span className="font-medium text-gray-600">Creado</span>
+                      <span>{new Date(product?.createdAt || '').toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex flex-wrap justify-between items-center py-2">
+                      <span className="font-medium text-gray-600">Actualizado</span>
+                      <span>{new Date(product?.updatedAt || '').toLocaleDateString()}</span>
+                    </div>
                   </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Descripción</h3>
+                <div className="bg-gray-50 p-4 rounded-md h-full">
+                  <p className="whitespace-pre-line text-gray-700">{product?.description}</p>
                 </div>
               </div>
             </div>

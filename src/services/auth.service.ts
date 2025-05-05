@@ -33,6 +33,7 @@ const AuthService = {
 
   login: async (data: LoginData): Promise<AuthResponse> => {
     const response = await api.post<AuthResponse>('/auth/login', data);
+    console.log('Login response:', response.data);
     return response.data;
   },
 
@@ -44,12 +45,15 @@ const AuthService = {
   getCurrentUser: (): User | null => {
     const userStr = localStorage.getItem('user');
     if (userStr) {
-      return JSON.parse(userStr);
+      const user = JSON.parse(userStr);
+      console.log('User from localStorage:', user);
+      return user;
     }
     return null;
   },
 
   saveUserData: (data: AuthResponse): void => {
+    console.log('Saving user data:', data);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
   },
