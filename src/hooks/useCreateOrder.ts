@@ -1,8 +1,12 @@
 import { useState, useCallback } from 'react';
 import { orderService } from '../services/orderService';
-import { productService } from '../services/productService';
+import ProductService, { Product } from '../services/product.service';
 import { useToast } from '../context/toast-context';
-import { Product } from '../types/product';
+
+interface OrderItem {
+  product: Product;
+  quantity: number;
+}
 
 export const useCreateOrder = (onOrderCreated: () => void) => {
   const { showToast } = useToast();
@@ -10,11 +14,12 @@ export const useCreateOrder = (onOrderCreated: () => void) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
 
   const loadProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await productService.getProducts(1, 100);
+      const response = await ProductService.getProducts(1, 100);
       setProducts(response.data);
     } catch (err: any) {
       console.error('Error loading products:', err);
@@ -27,23 +32,46 @@ export const useCreateOrder = (onOrderCreated: () => void) => {
     }
   }, [showToast]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
+  const addItem = useCallback(() => {
     if (!selectedProduct) {
       showToast('Por favor, seleccione un producto', 'error');
       return;
     }
 
+    const existingItem = orderItems.find(item => item.product.id === selectedProduct.id);
+    if (existingItem) {
+      showToast('Este producto ya está en la orden', 'error');
+      return;
+    }
+
+    setOrderItems(prev => [...prev, { product: selectedProduct, quantity }]);
+    setSelectedProduct(null);
+    setQuantity(1);
+  }, [selectedProduct, quantity, orderItems, showToast]);
+
+  const removeItem = useCallback((productId: string) => {
+    setOrderItems(prev => prev.filter(item => item.product.id !== productId));
+  }, []);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (orderItems.length === 0) {
+      showToast('Por favor, agregue al menos un producto a la orden', 'error');
+      return;
+    }
+
     try {
       setLoading(true);
-      await orderService.createOrder([{
-        productId: selectedProduct.id,
-        quantity,
-      }]);
+      await orderService.createOrder(orderItems.map(item => ({
+        productId: item.product.id,
+        quantity: item.quantity,
+      })));
       showToast('Orden creada exitosamente', 'success');
       onOrderCreated();
+      setOrderItems([]);
       setSelectedProduct(null);
       setQuantity(1);
+      onOrderCreated();
     } catch (err: any) {
       console.error('Error creating order:', err);
       showToast(
@@ -53,21 +81,23 @@ export const useCreateOrder = (onOrderCreated: () => void) => {
     } finally {
       setLoading(false);
     }
-  }, [selectedProduct, quantity, onOrderCreated, showToast]);
+  }, [orderItems, onOrderCreated, showToast]);
 
   const total = useCallback(() => {
-    if (!selectedProduct) return 0;
-    return selectedProduct.price * quantity;
-  }, [selectedProduct, quantity]);
+    return orderItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  }, [orderItems]);
 
   return {
     loading,
     products,
     selectedProduct,
     quantity,
+    orderItems,
     total: total(),
     setSelectedProduct,
     setQuantity,
+    addItem,
+    removeItem,
     loadProducts,
     handleSubmit,
   };

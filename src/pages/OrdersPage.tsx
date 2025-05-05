@@ -82,7 +82,15 @@ export const OrdersPage: React.FC = () => {
                 : 'Cliente no registrado'}
           </TableCell>
         )}
-        <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+        <TableCell>
+          {new Date(order.createdAt).toLocaleString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </TableCell>
         <TableCell>${order.total.toFixed(2)}</TableCell>
         <TableCell>{order.quantity_products}</TableCell>
         <TableCell className="text-right">
@@ -164,7 +172,12 @@ export const OrdersPage: React.FC = () => {
               <DialogHeader>
                 <DialogTitle>Crear Nueva Orden</DialogTitle>
               </DialogHeader>
-              <CreateOrderForm onOrderCreated={handleOrderCreated} />
+              <CreateOrderForm 
+                onOrderCreated={() => {
+                  handleOrderCreated();
+                  setIsCreateFormOpen(false);
+                }} 
+              />
             </DialogContent>
           </Dialog>
         )}
